@@ -1,4 +1,4 @@
-name: Build and Deploy APK
+name: Build APK
 
 on:
   push:
@@ -13,21 +13,44 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Set up Python
+      - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'  # Adjust Python version as needed
+          python-version: 3.8
 
-      - name: Install Buildozer and dependencies
+      - name: Install system dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip install buildozer
+          sudo apt-get update
           sudo apt-get install -y \
             build-essential \
             git \
             python3 \
+            python3-pip \
+            python3-setuptools \
+            python3-venv \
             zlib1g-dev \
             openjdk-8-jdk
+
+      - name: Install Buildozer
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install buildozer
+
+      - name: Install Buildozer dependencies
+        run: |
+          sudo apt-get install -y \
+            python3-dev \
+            libffi-dev \
+            libssl-dev \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev
 
       - name: Build APK
         run: |
