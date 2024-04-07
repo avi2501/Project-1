@@ -1,63 +1,46 @@
-name: Build APK
-
+name: CI
 on:
   push:
-    branches:
-      - main  # Adjust branch name if needed
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 1,15 * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+      # used to cache dependencies with a timeout
+      - name: Get Date
+        id: get-date
+        run: |
+          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+        shell: bash
+
+      - name: Cache Buildozer global directory
+        uses: actions/cache@v2
         with:
-          python-version: 3.8
+          path: .buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }} # Replace with your path
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            git \
-            python3 \
-            python3-pip \
-            python3-setuptools \
-            python3-venv \
-            zlib1g-dev \
-            openjdk-8-jdk
+      - uses: actions/cache@v2
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-      - name: Install Buildozer
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install buildozer
+      - name: Build with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          buildozer_version: master
 
-      - name: Install Buildozer dependencies
-        run: |
-          sudo apt-get install -y \
-            python3-dev \
-            libffi-dev \
-            libssl-dev \
-            libsdl2-dev \
-            libsdl2-image-dev \
-            libsdl2-mixer-dev \
-            libsdl2-ttf-dev \
-            libportmidi-dev \
-            libswscale-dev \
-            libavformat-dev \
-            libavcodec-dev \
-            zlib1g-dev
-
-      - name: Build APK
-        run: |
-          buildozer -v android debug
-
-      - name: Upload APK
+      - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: my-kivy-app.apk  # Adjust APK name if needed
-          path: ./bin/
+          name: package
+          path: ${{ steps.buildozer.outputs.filename }}
